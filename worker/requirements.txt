@@ -1,0 +1,10 @@
+redis==5.0.1
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+python-dotenv==1.0.0
+requests==2.31.0
+# AI/ML Dependencies
+torch --index-url https://download.pytorch.org/whl/cpu
+transformers==4.37.2
+groq==0.4.2
+scipy==1.11.4

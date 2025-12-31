@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+.DS_Store
+
+# Node/React
+node_modules/
+build/
+dist/
+
+# Docker/System
+.docker_volumes/
+postgres_data/
+
+

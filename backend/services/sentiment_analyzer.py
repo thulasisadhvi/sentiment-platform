@@ -27,7 +27,8 @@ class SentimentAnalyzer:
         self.ext_endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
         if self.model_type == 'local':
-            sent_model = model_name or os.getenv("HUGGINGFACE_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
+            # UPDATED: Using Twitter RoBERTa which handles Neutral natively
+            sent_model = model_name or os.getenv("HUGGINGFACE_MODEL", "cardiffnlp/twitter-roberta-base-sentiment-latest")
             logger.info(f"📥 Loading Local Sentiment Model: {sent_model}...")
             self.sentiment_pipeline = pipeline(
                 "text-classification",
@@ -64,21 +65,32 @@ class SentimentAnalyzer:
                 results = await asyncio.to_thread(self.sentiment_pipeline, truncated_text)
                 results = results[0]
                 
+                # Normalize results (Find highest score)
                 top_result = max(results, key=lambda x: x['score'])
                 raw_label = top_result['label'].lower()
                 score = round(float(top_result['score']), 4)
                 
-                # --- UPDATED THRESHOLD: 0.80 ---
-                # Less strict. Allows strong opinions to pass, 
-                # but catches weak ones as Neutral.
-                if score < 0.80:
-                    final_label = 'neutral'
-                elif raw_label in ['positive', 'label_1', '5 stars']:
+                # --- UPDATED LOGIC FOR ROBERTA ---
+                # This model supports 'neutral', 'positive', and 'negative' directly.
+                # We do NOT need the threshold gatekeeper anymore.
+                
+                final_label = 'neutral' # Default fallback
+                
+                if 'positive' in raw_label:
                     final_label = 'positive'
-                elif raw_label in ['negative', 'label_0', '1 star']:
+                elif 'negative' in raw_label:
                     final_label = 'negative'
-                else:
+                elif 'neutral' in raw_label:
                     final_label = 'neutral'
+                else:
+                    # Handle raw ID mappings if the model returns LABEL_0, etc.
+                    # For RoBERTa: 0=Negative, 1=Neutral, 2=Positive
+                    if raw_label == 'label_0':
+                        final_label = 'negative'
+                    elif raw_label == 'label_1':
+                        final_label = 'neutral'
+                    elif raw_label == 'label_2':
+                        final_label = 'positive'
 
                 return {
                     'sentiment_label': final_label,
